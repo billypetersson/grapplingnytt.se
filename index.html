@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GrapplingNytt.se - Nyheter om Grappling, NoGi & BJJ</title>
+    <meta name="description" content="Sveriges främsta källa för nyheter om grappling, nogi, ADCC och brasiliansk jiu-jitsu">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <div class="nav-container">
+                <div class="logo">
+                    <img src="assets/images/logo.png" alt="GrapplingNytt.se" class="logo-img">
+                    <h1 class="logo-text">GrapplingNytt.se</h1>
+                </div>
+                <ul class="nav-menu">
+                    <li><a href="#nyheter">Nyheter</a></li>
+                    <li><a href="#tavlingar">Tävlingar</a></li>
+                    <li><a href="#adcc">ADCC</a></li>
+                    <li><a href="#bjj">BJJ</a></li>
+                </ul>
+                <div class="nav-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="hero-content">
+                <h2 class="hero-title">Sveriges främsta källa för grappling-nyheter</h2>
+                <p class="hero-subtitle">Följ de senaste nyheterna inom grappling, nogi, ADCC och brasiliansk jiu-jitsu</p>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <span class="stat-number">500+</span>
+                        <span class="stat-label">Artiklar</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">50+</span>
+                        <span class="stat-label">Tävlingar</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">24/7</span>
+                        <span class="stat-label">Uppdateringar</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="main-content">
+            <!-- Latest News Section -->
+            <section class="news-section" id="nyheter">
+                <div class="container">
+                    <h2 class="section-title">Senaste Nyheterna</h2>
+                    <div class="news-grid" id="news-container">
+                        <!-- News articles will be loaded here -->
+                        <div class="news-loading">Laddar nyheter...</div>
+                    </div>
+                    <button class="load-more-btn" id="load-more">Ladda fler nyheter</button>
+                </div>
+            </section>
+
+            <div class="content-wrapper">
+                <div class="main-column">
+                    <!-- Featured Articles -->
+                    <section class="featured-section">
+                        <h2 class="section-title">Utvalda Artiklar</h2>
+                        <div class="featured-grid" id="featured-container">
+                            <!-- Featured content will be loaded here -->
+                        </div>
+                    </section>
+                </div>
+
+                <aside class="sidebar">
+                    <!-- Upcoming Events Calendar -->
+                    <section class="events-section" id="tavlingar">
+                        <h3 class="sidebar-title">Kommande Tävlingar</h3>
+                        <div class="calendar-widget" id="events-calendar">
+                            <!-- Events will be loaded here -->
+                        </div>
+                        <a href="#" class="view-all-events">Visa alla tävlingar →</a>
+                    </section>
+
+                    <!-- ADCC Updates -->
+                    <section class="adcc-section" id="adcc">
+                        <h3 class="sidebar-title">ADCC Uppdateringar</h3>
+                        <div class="adcc-updates" id="adcc-updates">
+                            <!-- ADCC content will be loaded here -->
+                        </div>
+                    </section>
+
+                    <!-- BJJ News -->
+                    <section class="bjj-section" id="bjj">
+                        <h3 class="sidebar-title">BJJ Nyheter</h3>
+                        <div class="bjj-news" id="bjj-news">
+                            <!-- BJJ content will be loaded here -->
+                        </div>
+                    </section>
+                </aside>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>GrapplingNytt.se</h4>
+                    <p>Sveriges främsta källa för grappling-nyheter</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Kategorier</h4>
+                    <ul>
+                        <li><a href="#nyheter">Nyheter</a></li>
+                        <li><a href="#adcc">ADCC</a></li>
+                        <li><a href="#bjj">BJJ</a></li>
+                        <li><a href="#tavlingar">Tävlingar</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Kontakt</h4>
+                    <p>info@grapplingnytt.se</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 GrapplingNytt.se. Alla rättigheter förbehållna.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="assets/js/main.js"></script>
+</body>
+</html>

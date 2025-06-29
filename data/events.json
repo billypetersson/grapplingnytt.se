@@ -1,0 +1,146 @@
+{
+  "upcoming_events": [
+    {
+      "id": 1,
+      "title": "ADCC World Championships 2024",
+      "date": "2024-09-14",
+      "end_date": "2024-09-15",
+      "location": "Las Vegas, Nevada, USA",
+      "venue": "Thomas & Mack Center",
+      "type": "adcc",
+      "category": "World Championship",
+      "description": "The most prestigious no-gi grappling tournament in the world",
+      "website": "https://adcc.com",
+      "registration_open": true,
+      "registration_deadline": "2024-08-01"
+    },
+    {
+      "id": 2,
+      "title": "IBJJF Swedish Open",
+      "date": "2024-03-15",
+      "end_date": "2024-03-17",
+      "location": "Stockholm, Sverige",
+      "venue": "Eriksdalshallen",
+      "type": "bjj",
+      "category": "IBJJF Open",
+      "description": "Svenska öppna i brasiliansk jiu-jitsu",
+      "website": "https://ibjjf.com",
+      "registration_open": true,
+      "registration_deadline": "2024-02-28"
+    },
+    {
+      "id": 3,
+      "title": "Polaris 28",
+      "date": "2024-02-24",
+      "location": "London, UK",
+      "venue": "OVO Arena Wembley",
+      "type": "professional",
+      "category": "Invitation Only",
+      "description": "Professional grappling promotion featuring elite athletes",
+      "website": "https://polarisgrappling.com",
+      "registration_open": false
+    },
+    {
+      "id": 4,
+      "title": "Svenska Mästerskapen NoGi",
+      "date": "2024-04-20",
+      "end_date": "2024-04-21",
+      "location": "Göteborg, Sverige",
+      "venue": "Scandinavium",
+      "type": "nogi",
+      "category": "National Championship",
+      "description": "Svenska mästerskapen i no-gi grappling",
+      "website": "https://svenskagrapplingforbundet.se",
+      "registration_open": true,
+      "registration_deadline": "2024-04-01"
+    },
+    {
+      "id": 5,
+      "title": "UAEJJF Grand Slam Abu Dhabi",
+      "date": "2024-05-18",
+      "end_date": "2024-05-19",
+      "location": "Abu Dhabi, UAE",
+      "venue": "Mubadala Arena",
+      "type": "bjj",
+      "category": "Grand Slam",
+      "description": "One of the biggest BJJ tournaments outside of Brazil",
+      "website": "https://uaejjf.com",
+      "registration_open": true,
+      "registration_deadline": "2024-04-30"
+    },
+    {
+      "id": 6,
+      "title": "WNO: Craig Jones vs Gordon Ryan",
+      "date": "2024-03-30",
+      "location": "Austin, Texas, USA",
+      "venue": "H-E-B Center",
+      "type": "superfight",
+      "category": "Professional Match",
+      "description": "Highly anticipated superfight between two grappling legends",
+      "website": "https://www.flograppling.com/wno",
+      "registration_open": false
+    },
+    {
+      "id": 7,
+      "title": "ADCC European Trials",
+      "date": "2024-06-15",
+      "location": "Rome, Italy",
+      "venue": "PalaPellicone",
+      "type": "adcc_trials",
+      "category": "Qualifier",
+      "description": "European qualifier for ADCC World Championships",
+      "website": "https://adcc.com",
+      "registration_open": true,
+      "registration_deadline": "2024-05-31"
+    },
+    {
+      "id": 8,
+      "title": "Grapplers Quest Stockholm",
+      "date": "2024-07-12",
+      "location": "Stockholm, Sverige",
+      "venue": "Hovet",
+      "type": "grappling",
+      "category": "Open Tournament",
+      "description": "Stor grapplingturnering för alla nivåer",
+      "registration_open": true,
+      "registration_deadline": "2024-06-30"
+    }
+  ],
+  "event_types": {
+    "adcc": {
+      "name": "ADCC",
+      "color": "#1a237e",
+      "description": "Abu Dhabi Combat Club competitions"
+    },
+    "bjj": {
+      "name": "BJJ",
+      "color": "#c62828",
+      "description": "Brazilian Jiu-Jitsu tournaments"
+    },
+    "nogi": {
+      "name": "NoGi",
+      "color": "#ffd600",
+      "description": "No-Gi Grappling competitions"
+    },
+    "professional": {
+      "name": "Professional",
+      "color": "#4caf50",
+      "description": "Professional grappling events"
+    },
+    "superfight": {
+      "name": "Superfight",
+      "color": "#ff9800",
+      "description": "Elite athlete matchups"
+    },
+    "adcc_trials": {
+      "name": "ADCC Trials",
+      "color": "#9c27b0",
+      "description": "ADCC World Championship qualifiers"
+    },
+    "grappling": {
+      "name": "Grappling",
+      "color": "#607d8b",
+      "description": "General grappling tournaments"
+    }
+  }
+}
