@@ -11,6 +11,7 @@ class GrapplingNytt {
         
         this.newsOffset = 0;
         this.newsLimit = 6;
+        this.remainingNews = [];
         
         this.init();
     }
@@ -51,56 +52,86 @@ class GrapplingNytt {
     }
     
     async loadNews() {
+        // Show loading indicator
+        this.newsContainer.innerHTML = '<div class="news-loading"><div class="loading-spinner"></div>Laddar nyheter...</div>';
+        
         try {
-            // Try to load from RSS feeds first, fallback to mock data
-            let allNews = [];
-            const feeds = this.getRSSFeeds();
+            const feeds = this.getRSSFeeds().slice(0, 3); // Limit to 3 feeds for speed
+            const feedPromises = feeds.map(feed => this.loadFeedWithTimeout(feed, 5000)); // 5 second timeout per feed
             
-            // Attempt to load from RSS feeds
-            for (const feed of feeds.slice(0, 3)) { // Load from first 3 feeds to avoid rate limits
-                try {
-                    const rssData = await this.fetchRSSFeed(feed.url);
-                    const processedNews = rssData.items.map(item => ({
-                        title: item.title || 'Ingen titel',
-                        excerpt: this.truncateText(
-                            item.description || 
-                            item['content:encoded'] || 
-                            'Läs mer...', 
-                            150
-                        ),
-                        source: feed.name,
-                        date: item.pubDate || new Date().toISOString(),
-                        image: this.extractRSSImage(item, rssData.channel) || 
-                               `https://via.placeholder.com/400x200/ed1c24/ffffff?text=${encodeURIComponent(feed.name)}`,
-                        url: item.link || '#',
-                        category: feed.category,
-                        author: item.author || item['dc:creator'] || '',
-                        guid: item.guid?.value || item.link || ''
-                    }));
-                    allNews = allNews.concat(processedNews.slice(0, 2)); // Max 2 articles per feed
-                } catch (feedError) {
-                    console.warn(`Failed to load feed ${feed.name}:`, feedError.message);
+            // Load feeds in parallel with Promise.allSettled to continue even if some fail
+            const results = await Promise.allSettled(feedPromises);
+            
+            let allNews = [];
+            results.forEach((result, index) => {
+                if (result.status === 'fulfilled' && result.value.length > 0) {
+                    allNews = allNews.concat(result.value);
+                } else if (result.status === 'rejected') {
+                    console.warn(`Feed ${feeds[index].name} failed:`, result.reason);
                 }
-            }
+            });
             
             // If no RSS news loaded, use mock data
             if (allNews.length === 0) {
-                console.log('Using mock data as fallback');
+                console.log('No RSS feeds loaded, using mock data');
                 allNews = this.getMockNews();
             }
             
             // Sort by date and display
             allNews.sort((a, b) => new Date(b.date) - new Date(a.date));
-            this.displayNews(allNews.slice(this.newsOffset, this.newsOffset + this.newsLimit));
-            this.newsOffset += this.newsLimit;
+            
+            // Clear loading and display news
+            this.newsContainer.innerHTML = '';
+            this.displayNews(allNews.slice(0, this.newsLimit));
+            this.newsOffset = this.newsLimit;
+            
+            // Store remaining news for "load more"
+            this.remainingNews = allNews.slice(this.newsLimit);
             
         } catch (error) {
             console.error('Error loading news:', error);
             // Fallback to mock data on error
             const mockNews = this.getMockNews();
+            this.newsContainer.innerHTML = '';
             this.displayNews(mockNews.slice(0, this.newsLimit));
             this.newsOffset = this.newsLimit;
         }
+    }
+    
+    async loadFeedWithTimeout(feed, timeout = 5000) {
+        return new Promise(async (resolve, reject) => {
+            const timer = setTimeout(() => {
+                reject(new Error(`Feed ${feed.name} timed out after ${timeout}ms`));
+            }, timeout);
+            
+            try {
+                const rssData = await this.fetchRSSFeed(feed.url);
+                clearTimeout(timer);
+                
+                const processedNews = rssData.items.slice(0, 3).map(item => ({
+                    title: item.title || 'Ingen titel',
+                    excerpt: this.truncateText(
+                        item.description || 
+                        item['content:encoded'] || 
+                        'Läs mer...', 
+                        150
+                    ),
+                    source: feed.name,
+                    date: item.pubDate || new Date().toISOString(),
+                    image: this.extractRSSImage(item, rssData.channel) || 
+                           `https://via.placeholder.com/400x200/ed1c24/ffffff?text=${encodeURIComponent(feed.name)}`,
+                    url: item.link || '#',
+                    category: feed.category,
+                    author: item.author || item['dc:creator'] || '',
+                    guid: item.guid?.value || item.link || ''
+                }));
+                
+                resolve(processedNews);
+            } catch (error) {
+                clearTimeout(timer);
+                reject(error);
+            }
+        });
     }
     
     getMockNews() {
@@ -168,24 +199,52 @@ class GrapplingNytt {
     }
     
     createNewsCard(article) {
-        const card = document.createElement('div');
+        const card = document.createElement('article');
         card.className = 'news-card';
+        card.setAttribute('role', 'article');
+        card.setAttribute('tabindex', '0');
         
+        // Make the entire card clickable
         card.innerHTML = `
-            <img src="${article.image}" alt="${article.title}" loading="lazy">
+            <div class="news-card-image">
+                <img src="${article.image}" alt="${article.title}" loading="lazy" onerror="this.src='https://via.placeholder.com/400x200/ed1c24/ffffff?text=GrapplingNytt'">
+            </div>
             <div class="news-card-content">
-                <h3>${article.title}</h3>
-                <p>${article.excerpt}</p>
+                <h3 class="news-card-title">${article.title}</h3>
+                <p class="news-card-excerpt">${article.excerpt}</p>
                 <div class="news-meta">
                     <span class="news-source">${article.source}</span>
                     <span class="news-date">${this.formatDate(article.date)}</span>
                 </div>
+                <div class="news-card-link">
+                    <span class="read-more">Läs mer →</span>
+                </div>
             </div>
         `;
         
-        card.addEventListener('click', () => {
-            // In a real implementation, this would navigate to the full article
-            console.log('Navigate to:', article.url);
+        // Add click event with proper URL handling
+        const handleClick = (e) => {
+            e.preventDefault();
+            if (article.url && article.url !== '#') {
+                // Open external links in new tab
+                window.open(article.url, '_blank', 'noopener,noreferrer');
+            } else {
+                console.warn('No URL available for article:', article.title);
+            }
+        };
+        
+        // Add click and keyboard events
+        card.addEventListener('click', handleClick);
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleClick(e);
+            }
+        });
+        
+        // Add hover effects
+        card.addEventListener('mouseenter', () => {
+            card.style.cursor = article.url && article.url !== '#' ? 'pointer' : 'default';
         });
         
         return card;
@@ -375,9 +434,59 @@ class GrapplingNytt {
     
     setupLoadMore() {
         if (this.loadMoreBtn) {
-            this.loadMoreBtn.addEventListener('click', () => {
-                this.loadNews();
+            this.loadMoreBtn.addEventListener('click', async () => {
+                this.loadMoreBtn.disabled = true;
+                this.loadMoreBtn.innerHTML = '<div class="loading-spinner"></div>Laddar fler...';
+                
+                try {
+                    // If we have remaining news from the last load, show those first
+                    if (this.remainingNews && this.remainingNews.length > 0) {
+                        const moreNews = this.remainingNews.slice(0, this.newsLimit);
+                        this.remainingNews = this.remainingNews.slice(this.newsLimit);
+                        this.displayNews(moreNews);
+                        
+                        // If no more remaining news, try to load fresh content
+                        if (this.remainingNews.length === 0) {
+                            await this.loadMoreFromFeeds();
+                        }
+                    } else {
+                        // Load fresh content from feeds
+                        await this.loadMoreFromFeeds();
+                    }
+                } catch (error) {
+                    console.error('Error loading more news:', error);
+                    // Show mock news as fallback
+                    const mockNews = this.getMockNews();
+                    const startIndex = this.newsOffset;
+                    const moreNews = mockNews.slice(startIndex, startIndex + this.newsLimit);
+                    if (moreNews.length > 0) {
+                        this.displayNews(moreNews);
+                        this.newsOffset += moreNews.length;
+                    }
+                } finally {
+                    this.loadMoreBtn.disabled = false;
+                    this.loadMoreBtn.innerHTML = 'Ladda fler nyheter';
+                }
             });
+        }
+    }
+    
+    async loadMoreFromFeeds() {
+        const feeds = this.getRSSFeeds().slice(3, 6); // Load different feeds for variety
+        const feedPromises = feeds.map(feed => this.loadFeedWithTimeout(feed, 3000)); // Shorter timeout for "load more"
+        
+        const results = await Promise.allSettled(feedPromises);
+        let moreNews = [];
+        
+        results.forEach((result, index) => {
+            if (result.status === 'fulfilled' && result.value.length > 0) {
+                moreNews = moreNews.concat(result.value);
+            }
+        });
+        
+        if (moreNews.length > 0) {
+            moreNews.sort((a, b) => new Date(b.date) - new Date(a.date));
+            this.displayNews(moreNews.slice(0, this.newsLimit));
         }
     }
     
@@ -434,14 +543,14 @@ class GrapplingNytt {
     async fetchRSSFeed(url) {
         const proxies = [
             {
-                name: 'AllOrigins',
-                url: `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
-                type: 'json_wrapped'
-            },
-            {
                 name: 'RSS2JSON',
                 url: `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`,
                 type: 'json_converted'
+            },
+            {
+                name: 'AllOrigins',
+                url: `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+                type: 'json_wrapped'
             }
         ];
         
