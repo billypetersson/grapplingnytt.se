@@ -362,6 +362,17 @@ body {
     font-size: 0.95rem;
 }
 
+.update-item h5 a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.update-item h5 a:hover {
+    color: var(--secondary-color);
+    text-decoration: underline;
+}
+
 /* Footer */
 .footer {
     background: var(--bg-dark);

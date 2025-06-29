@@ -1,0 +1,101 @@
+{
+  "feeds": [
+    {
+      "name": "Jits Magazine",
+      "url": "https://jitsmagazine.com/feed",
+      "category": "bjj",
+      "description": "BJJ-nyheter, teknik, resultat",
+      "active": true,
+      "priority": 1
+    },
+    {
+      "name": "Grapplezilla",
+      "url": "https://grapplezilla.com/feed",
+      "category": "grappling",
+      "description": "Grappling-nyheter, BJJ, brottning",
+      "active": true,
+      "priority": 2
+    },
+    {
+      "name": "BJJ Bear",
+      "url": "https://bjjbear.com/feed",
+      "category": "bjj",
+      "description": "Blogg om grappling, BJJ, MMA",
+      "active": true,
+      "priority": 3
+    },
+    {
+      "name": "Inside BJJ Podcast",
+      "url": "https://insidebjj.libsyn.com/rss",
+      "category": "podcast",
+      "description": "BJJ-intervjuer & berättelser",
+      "active": true,
+      "priority": 4
+    },
+    {
+      "name": "Destroyer Submission Grappling",
+      "url": "https://dstryrsg1.rssing.com/chan-23899833/all_p1.html",
+      "category": "grappling",
+      "description": "Fokus på grappling i Japan/Asien",
+      "active": false,
+      "priority": 5,
+      "note": "Non-standard RSS format, may need special handling"
+    },
+    {
+      "name": "FloGrappling",
+      "url": "https://www.flograppling.com/rss",
+      "category": "grappling",
+      "description": "Professional grappling coverage",
+      "active": true,
+      "priority": 1
+    },
+    {
+      "name": "BJJEE",
+      "url": "https://www.bjjee.com/feed/",
+      "category": "bjj",
+      "description": "European BJJ news",
+      "active": true,
+      "priority": 2
+    },
+    {
+      "name": "Grappling Insider",
+      "url": "https://grapplinginsider.com/feed/",
+      "category": "grappling",
+      "description": "Grappling news and analysis",
+      "active": true,
+      "priority": 3
+    }
+  ],
+  "proxy_services": [
+    {
+      "name": "RSS2JSON",
+      "url_template": "https://api.rss2json.com/v1/api.json?rss_url={URL}",
+      "active": true,
+      "rate_limit": "100/hour",
+      "response_format": "json"
+    },
+    {
+      "name": "AllOrigins",
+      "url_template": "https://api.allorigins.win/get?url={URL}",
+      "active": true,
+      "rate_limit": "1000/hour",
+      "response_format": "json_wrapped"
+    },
+    {
+      "name": "CORS Anywhere",
+      "url_template": "https://cors-anywhere.herokuapp.com/{URL}",
+      "active": false,
+      "rate_limit": "200/hour",
+      "response_format": "raw",
+      "note": "Requires demo key or self-hosting"
+    }
+  ],
+  "settings": {
+    "max_articles_per_feed": 3,
+    "max_feeds_to_load": 4,
+    "cache_duration_minutes": 15,
+    "fallback_to_mock": true,
+    "retry_failed_feeds": true,
+    "timeout_seconds": 10
+  }
+}
