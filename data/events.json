@@ -109,17 +109,17 @@
   "event_types": {
     "adcc": {
       "name": "ADCC",
-      "color": "#1a237e",
+      "color": "#000000",
       "description": "Abu Dhabi Combat Club competitions"
     },
     "bjj": {
       "name": "BJJ",
-      "color": "#c62828",
+      "color": "#ff3333",
       "description": "Brazilian Jiu-Jitsu tournaments"
     },
     "nogi": {
       "name": "NoGi",
-      "color": "#ffd600",
+      "color": "#333333",
       "description": "No-Gi Grappling competitions"
     },
     "professional": {
