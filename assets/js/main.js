@@ -59,19 +59,27 @@ class GrapplingNytt {
             // Attempt to load from RSS feeds
             for (const feed of feeds.slice(0, 3)) { // Load from first 3 feeds to avoid rate limits
                 try {
-                    const feedNews = await this.fetchRSSFeed(feed.url);
-                    const processedNews = feedNews.map(item => ({
-                        title: item.title,
-                        excerpt: this.truncateText(item.description || item.content || 'Läs mer...', 150),
+                    const rssData = await this.fetchRSSFeed(feed.url);
+                    const processedNews = rssData.items.map(item => ({
+                        title: item.title || 'Ingen titel',
+                        excerpt: this.truncateText(
+                            item.description || 
+                            item['content:encoded'] || 
+                            'Läs mer...', 
+                            150
+                        ),
                         source: feed.name,
                         date: item.pubDate || new Date().toISOString(),
-                        image: this.extractImageFromContent(item.content) || `https://via.placeholder.com/400x200/ed1c24/ffffff?text=${encodeURIComponent(feed.name)}`,
+                        image: this.extractRSSImage(item, rssData.channel) || 
+                               `https://via.placeholder.com/400x200/ed1c24/ffffff?text=${encodeURIComponent(feed.name)}`,
                         url: item.link || '#',
-                        category: feed.category
+                        category: feed.category,
+                        author: item.author || item['dc:creator'] || '',
+                        guid: item.guid?.value || item.link || ''
                     }));
                     allNews = allNews.concat(processedNews.slice(0, 2)); // Max 2 articles per feed
                 } catch (feedError) {
-                    console.warn(`Failed to load feed ${feed.name}:`, feedError);
+                    console.warn(`Failed to load feed ${feed.name}:`, feedError.message);
                 }
             }
             
@@ -252,20 +260,23 @@ class GrapplingNytt {
             
             for (const feed of feeds) {
                 try {
-                    const feedNews = await this.fetchRSSFeed(feed.url);
-                    const adccRelated = feedNews.filter(item => 
-                        item.title.toLowerCase().includes('adcc') ||
+                    const rssData = await this.fetchRSSFeed(feed.url);
+                    const adccRelated = rssData.items.filter(item => 
+                        item.title?.toLowerCase().includes('adcc') ||
                         item.description?.toLowerCase().includes('adcc') ||
-                        item.content?.toLowerCase().includes('adcc')
+                        item['content:encoded']?.toLowerCase().includes('adcc')
                     ).slice(0, 2);
                     
                     adccNews = adccNews.concat(adccRelated.map(item => ({
                         title: this.truncateText(item.title, 60),
-                        content: this.truncateText(item.description || item.content, 100),
+                        content: this.truncateText(
+                            item.description || item['content:encoded'], 
+                            100
+                        ),
                         url: item.link
                     })));
                 } catch (error) {
-                    console.warn(`Failed to load ADCC updates from ${feed.name}:`, error);
+                    console.warn(`Failed to load ADCC updates from ${feed.name}:`, error.message);
                 }
             }
             
@@ -312,15 +323,18 @@ class GrapplingNytt {
             
             for (const feed of feeds.slice(0, 2)) { // Load from top 2 BJJ feeds
                 try {
-                    const feedNews = await this.fetchRSSFeed(feed.url);
-                    const bjjItems = feedNews.slice(0, 2).map(item => ({
+                    const rssData = await this.fetchRSSFeed(feed.url);
+                    const bjjItems = rssData.items.slice(0, 2).map(item => ({
                         title: this.truncateText(item.title, 50),
-                        content: this.truncateText(item.description || item.content, 80),
+                        content: this.truncateText(
+                            item.description || item['content:encoded'], 
+                            80
+                        ),
                         url: item.link
                     }));
                     bjjNews = bjjNews.concat(bjjItems);
                 } catch (error) {
-                    console.warn(`Failed to load BJJ news from ${feed.name}:`, error);
+                    console.warn(`Failed to load BJJ news from ${feed.name}:`, error.message);
                 }
             }
             
@@ -384,73 +398,366 @@ class GrapplingNytt {
         return cleanText.substr(0, maxLength) + '...';
     }
     
-    extractImageFromContent(content) {
-        if (!content) return null;
-        // Try to extract image URL from content
-        const imgMatch = content.match(/<img[^>]+src="([^">]+)"/);
-        if (imgMatch) return imgMatch[1];
+    // Extract image from RSS 2.0.1 item following specification
+    extractRSSImage(item, channel) {
+        // 1. Check for media:thumbnail (Media RSS extension)
+        if (item['media:thumbnail']) {
+            return item['media:thumbnail'].url;
+        }
         
-        // Try to find image in enclosure or media tags
-        const mediaMatch = content.match(/https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)/i);
-        if (mediaMatch) return mediaMatch[0];
+        // 2. Check for enclosure with image type
+        if (item.enclosure && item.enclosure.type && 
+            item.enclosure.type.startsWith('image/')) {
+            return item.enclosure.url;
+        }
+        
+        // 3. Extract from content:encoded or description
+        const content = item['content:encoded'] || item.description || '';
+        if (content) {
+            const imgMatch = content.match(/<img[^>]+src=["']([^"']+)["']/i);
+            if (imgMatch) return imgMatch[1];
+            
+            // Look for direct image URLs in content
+            const urlMatch = content.match(/https?:\/\/[^\s<>"]+\.(jpg|jpeg|png|gif|webp)/i);
+            if (urlMatch) return urlMatch[0];
+        }
+        
+        // 4. Check channel image as fallback
+        if (channel && channel.image && channel.image.url) {
+            return channel.image.url;
+        }
         
         return null;
     }
     
-    // RSS Feed parsing with multiple proxy fallbacks
+    // RSS Feed parsing following RSS 2.0.1 specification
     async fetchRSSFeed(url) {
         const proxies = [
-            `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`,
-            `https://cors-anywhere.herokuapp.com/${url}`,
-            `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
+            {
+                name: 'AllOrigins',
+                url: `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+                type: 'json_wrapped'
+            },
+            {
+                name: 'RSS2JSON',
+                url: `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`,
+                type: 'json_converted'
+            }
         ];
         
-        for (const proxyUrl of proxies) {
+        for (const proxy of proxies) {
             try {
-                const response = await fetch(proxyUrl);
+                const response = await fetch(proxy.url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json, application/xml, text/xml, */*'
+                    }
+                });
                 
-                if (proxyUrl.includes('rss2json')) {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                if (proxy.type === 'json_converted') {
                     const data = await response.json();
                     if (data.status === 'ok' && data.items) {
-                        return data.items;
+                        // Convert RSS2JSON format back to RSS 2.0.1 compliant structure
+                        const rssData = this.convertFromRSS2JSON(data);
+                        const validation = this.validateRSS201(rssData);
+                        
+                        if (!validation.valid) {
+                            console.warn(`RSS validation errors for ${url}:`, validation.errors);
+                        }
+                        if (validation.warnings.length > 0) {
+                            console.warn(`RSS validation warnings for ${url}:`, validation.warnings);
+                        }
+                        
+                        return rssData;
                     }
-                } else if (proxyUrl.includes('allorigins')) {
+                } else if (proxy.type === 'json_wrapped') {
                     const data = await response.json();
                     if (data.contents) {
-                        return this.parseRSSXML(data.contents);
+                        const rssData = this.parseRSS201XML(data.contents);
+                        const validation = this.validateRSS201(rssData);
+                        
+                        if (!validation.valid) {
+                            console.warn(`RSS validation errors for ${url}:`, validation.errors);
+                        }
+                        if (validation.warnings.length > 0) {
+                            console.warn(`RSS validation warnings for ${url}:`, validation.warnings);
+                        }
+                        
+                        return rssData;
                     }
-                } else {
-                    // Direct CORS proxy
-                    const text = await response.text();
-                    return this.parseRSSXML(text);
                 }
             } catch (error) {
-                console.warn(`RSS proxy ${proxyUrl} failed:`, error);
+                console.warn(`RSS proxy ${proxy.name} failed for ${url}:`, error.message);
                 continue;
             }
         }
         
-        throw new Error('All RSS proxies failed');
+        throw new Error(`All RSS proxies failed for URL: ${url}`);
     }
     
-    parseRSSXML(xmlString) {
+    // RSS 2.0.1 compliant XML parser
+    parseRSS201XML(xmlString) {
         try {
             const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
-            const items = xmlDoc.querySelectorAll('item');
+            const xmlDoc = parser.parseFromString(xmlString, 'application/xml');
             
-            return Array.from(items).map(item => ({
-                title: item.querySelector('title')?.textContent || '',
-                description: item.querySelector('description')?.textContent || '',
-                content: item.querySelector('content\\:encoded')?.textContent || item.querySelector('description')?.textContent || '',
-                link: item.querySelector('link')?.textContent || '',
-                pubDate: item.querySelector('pubDate')?.textContent || '',
-                author: item.querySelector('author')?.textContent || item.querySelector('dc\\:creator')?.textContent || ''
-            }));
+            // Check for XML parsing errors
+            const parserError = xmlDoc.querySelector('parsererror');
+            if (parserError) {
+                throw new Error(`XML parsing error: ${parserError.textContent}`);
+            }
+            
+            // Validate RSS 2.0.1 structure
+            const rssElement = xmlDoc.querySelector('rss');
+            if (!rssElement) {
+                throw new Error('Invalid RSS: Missing <rss> root element');
+            }
+            
+            const version = rssElement.getAttribute('version');
+            if (!version || !version.startsWith('2.0')) {
+                console.warn(`RSS version ${version} may not be fully compatible with RSS 2.0.1`);
+            }
+            
+            const channel = xmlDoc.querySelector('rss > channel');
+            if (!channel) {
+                throw new Error('Invalid RSS: Missing <channel> element');
+            }
+            
+            // Extract channel metadata (RSS 2.0.1 required elements)
+            const channelData = this.extractChannelData(channel);
+            
+            // Extract items following RSS 2.0.1 specification
+            const items = channel.querySelectorAll('item');
+            const parsedItems = Array.from(items).map(item => this.parseRSSItem(item));
+            
+            return {
+                channel: channelData,
+                items: parsedItems
+            };
+            
         } catch (error) {
-            console.error('Error parsing RSS XML:', error);
-            return [];
+            console.error('Error parsing RSS 2.0.1 XML:', error);
+            throw error;
         }
+    }
+    
+    // Extract RSS 2.0.1 channel data
+    extractChannelData(channel) {
+        const getElementText = (selector) => {
+            const element = channel.querySelector(selector);
+            return element ? element.textContent.trim() : '';
+        };
+        
+        return {
+            title: getElementText('title'), // Required
+            link: getElementText('link'),   // Required
+            description: getElementText('description'), // Required
+            language: getElementText('language'),
+            copyright: getElementText('copyright'),
+            managingEditor: getElementText('managingEditor'),
+            webMaster: getElementText('webMaster'),
+            pubDate: getElementText('pubDate'),
+            lastBuildDate: getElementText('lastBuildDate'),
+            category: getElementText('category'),
+            generator: getElementText('generator'),
+            docs: getElementText('docs'),
+            cloud: this.parseCloudElement(channel.querySelector('cloud')),
+            ttl: getElementText('ttl'),
+            image: this.parseImageElement(channel.querySelector('image')),
+            rating: getElementText('rating'),
+            textInput: this.parseTextInputElement(channel.querySelector('textInput')),
+            skipHours: this.parseSkipHours(channel.querySelector('skipHours')),
+            skipDays: this.parseSkipDays(channel.querySelector('skipDays'))
+        };
+    }
+    
+    // Parse RSS 2.0.1 item following specification
+    parseRSSItem(item) {
+        const getElementText = (selector) => {
+            const element = item.querySelector(selector);
+            return element ? element.textContent.trim() : '';
+        };
+        
+        const getAllElements = (selector) => {
+            return Array.from(item.querySelectorAll(selector)).map(el => el.textContent.trim());
+        };
+        
+        // RSS 2.0.1 requires at least title OR description
+        const title = getElementText('title');
+        const description = getElementText('description');
+        
+        if (!title && !description) {
+            console.warn('RSS item missing both title and description (RSS 2.0.1 violation)');
+        }
+        
+        return {
+            title: title,
+            link: getElementText('link'),
+            description: description,
+            author: getElementText('author'),
+            category: getAllElements('category'),
+            comments: getElementText('comments'),
+            enclosure: this.parseEnclosureElement(item.querySelector('enclosure')),
+            guid: this.parseGuidElement(item.querySelector('guid')),
+            pubDate: getElementText('pubDate'),
+            source: this.parseSourceElement(item.querySelector('source')),
+            // Common namespace extensions
+            'content:encoded': getElementText('content\\:encoded'),
+            'dc:creator': getElementText('dc\\:creator'),
+            'dc:date': getElementText('dc\\:date'),
+            'media:thumbnail': this.parseMediaThumbnail(item.querySelector('media\\:thumbnail'))
+        };
+    }
+    
+    // Helper methods for RSS 2.0.1 elements
+    parseImageElement(imageEl) {
+        if (!imageEl) return null;
+        return {
+            url: imageEl.querySelector('url')?.textContent || '',
+            title: imageEl.querySelector('title')?.textContent || '',
+            link: imageEl.querySelector('link')?.textContent || '',
+            width: parseInt(imageEl.querySelector('width')?.textContent) || undefined,
+            height: parseInt(imageEl.querySelector('height')?.textContent) || undefined,
+            description: imageEl.querySelector('description')?.textContent || ''
+        };
+    }
+    
+    parseEnclosureElement(enclosureEl) {
+        if (!enclosureEl) return null;
+        return {
+            url: enclosureEl.getAttribute('url') || '',
+            length: parseInt(enclosureEl.getAttribute('length')) || 0,
+            type: enclosureEl.getAttribute('type') || ''
+        };
+    }
+    
+    parseGuidElement(guidEl) {
+        if (!guidEl) return null;
+        return {
+            value: guidEl.textContent.trim(),
+            isPermaLink: guidEl.getAttribute('isPermaLink') !== 'false'
+        };
+    }
+    
+    parseSourceElement(sourceEl) {
+        if (!sourceEl) return null;
+        return {
+            url: sourceEl.getAttribute('url') || '',
+            value: sourceEl.textContent.trim()
+        };
+    }
+    
+    parseCloudElement(cloudEl) {
+        if (!cloudEl) return null;
+        return {
+            domain: cloudEl.getAttribute('domain') || '',
+            port: parseInt(cloudEl.getAttribute('port')) || 80,
+            path: cloudEl.getAttribute('path') || '',
+            registerProcedure: cloudEl.getAttribute('registerProcedure') || '',
+            protocol: cloudEl.getAttribute('protocol') || ''
+        };
+    }
+    
+    parseTextInputElement(textInputEl) {
+        if (!textInputEl) return null;
+        return {
+            title: textInputEl.querySelector('title')?.textContent || '',
+            description: textInputEl.querySelector('description')?.textContent || '',
+            name: textInputEl.querySelector('name')?.textContent || '',
+            link: textInputEl.querySelector('link')?.textContent || ''
+        };
+    }
+    
+    parseSkipHours(skipHoursEl) {
+        if (!skipHoursEl) return [];
+        return Array.from(skipHoursEl.querySelectorAll('hour')).map(h => parseInt(h.textContent));
+    }
+    
+    parseSkipDays(skipDaysEl) {
+        if (!skipDaysEl) return [];
+        return Array.from(skipDaysEl.querySelectorAll('day')).map(d => d.textContent.trim());
+    }
+    
+    parseMediaThumbnail(thumbnailEl) {
+        if (!thumbnailEl) return null;
+        return {
+            url: thumbnailEl.getAttribute('url') || '',
+            width: parseInt(thumbnailEl.getAttribute('width')) || undefined,
+            height: parseInt(thumbnailEl.getAttribute('height')) || undefined
+        };
+    }
+    
+    // Convert RSS2JSON format to our RSS 2.0.1 structure
+    convertFromRSS2JSON(data) {
+        return {
+            channel: {
+                title: data.feed?.title || '',
+                link: data.feed?.link || '',
+                description: data.feed?.description || '',
+                image: data.feed?.image ? { url: data.feed.image } : null
+            },
+            items: data.items.map(item => ({
+                title: item.title || '',
+                link: item.link || '',
+                description: item.description || '',
+                pubDate: item.pubDate || '',
+                author: item.author || '',
+                'content:encoded': item.content || '',
+                enclosure: item.enclosure || null,
+                guid: item.guid ? { value: item.guid, isPermaLink: true } : null
+            }))
+        };
+    }
+    
+    // Validate RSS 2.0.1 compliance
+    validateRSS201(rssData) {
+        const errors = [];
+        const warnings = [];
+        
+        // Validate channel required elements
+        if (!rssData.channel) {
+            errors.push('Missing channel element');
+            return { valid: false, errors, warnings };
+        }
+        
+        if (!rssData.channel.title) {
+            errors.push('Channel missing required title element');
+        }
+        
+        if (!rssData.channel.link) {
+            errors.push('Channel missing required link element');
+        }
+        
+        if (!rssData.channel.description) {
+            errors.push('Channel missing required description element');
+        }
+        
+        // Validate items
+        if (rssData.items && rssData.items.length > 0) {
+            rssData.items.forEach((item, index) => {
+                if (!item.title && !item.description) {
+                    warnings.push(`Item ${index + 1}: Missing both title and description (RSS 2.0.1 requires at least one)`);
+                }
+                
+                if (item.guid && typeof item.guid === 'object' && !item.guid.value) {
+                    warnings.push(`Item ${index + 1}: GUID element present but empty`);
+                }
+                
+                if (item.enclosure && (!item.enclosure.url || !item.enclosure.type)) {
+                    warnings.push(`Item ${index + 1}: Enclosure missing required url or type attribute`);
+                }
+            });
+        }
+        
+        return {
+            valid: errors.length === 0,
+            errors,
+            warnings
+        };
     }
     
     // RSS feeds for grappling news
