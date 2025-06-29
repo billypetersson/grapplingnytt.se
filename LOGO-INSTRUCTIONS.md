@@ -5,7 +5,7 @@
 The website now uses colors extracted from your GrapplingNytt logo:
 
 - **Primary:** `#000000` (Logo black)
-- **Secondary:** `#ff3333` (Logo red accent)  
+- **Secondary:** `#ed1c24` (Exact logo red)  
 - **Tertiary:** `#333333` (Dark gray accent)
 
 ## 📁 Logo Files Added

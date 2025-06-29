@@ -2,7 +2,7 @@
 :root {
     /* Color scheme - extracted from GrapplingNytt logo */
     --primary-color: #000000; /* Logo black */
-    --secondary-color: #ff3333; /* Logo red accent */
+    --secondary-color: #ed1c24; /* Exact logo red */
     --tertiary-color: #333333; /* Dark gray accent */
     --bg-primary: #ffffff;
     --bg-secondary: #f8f9fa;
@@ -13,7 +13,7 @@
     --border-color: #dee2e6;
     --shadow-color: rgba(0, 0, 0, 0.1);
     --shadow-hover: rgba(0, 0, 0, 0.15);
-    --accent-red: #ff3333; /* Matching logo red */
+    --accent-red: #ed1c24; /* Matching logo red */
 }
 
 * {
